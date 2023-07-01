@@ -35,6 +35,12 @@ def import_street_data_to_sqlite(place_name):
     # conn.close()
 
 # Example usage
-place_name = "Edgewood, Washington, D.C., USA"
+place_name = "Greater Sudbury, ON, Canada"
 db_name = "street_data.db"
-print(import_street_data_to_sqlite(place_name))
+
+streetdata = import_street_data_to_sqlite(place_name)
+
+# save the data to csv, turn function off after 1st save
+# streetdata.to_csv('/workspaces/traffic/streetdata_sudbury.csv')
+
+print(streetdata)
