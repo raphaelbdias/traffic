@@ -13,33 +13,33 @@ from geolocation import import_street_data_to_sqlite
 app = Flask(__name__)
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route("/", methods=["GET", "POST"])
 def display_image():
-    if request.method == 'POST':
+    if request.method == "POST":
         # Get the location input from the form
-        place_name = request.form['location']
+        place_name = request.form["location"]
 
         # Call the function to import street data and retrieve the GeoDataFrame
         gdf = import_street_data_to_sqlite(place_name)
         print(gdf)
 
         # Convert the GeoDataFrame to an image
-        image = gdf.plot(figsize=(10, 10), edgecolor='black', linewidth=0.5)
+        image = gdf.plot(figsize=(10, 10), edgecolor="black", linewidth=0.5)
 
         # Save the image to a BytesIO object
         buffer = io.BytesIO()
-        image.figure.savefig(buffer, format='png')
+        image.figure.savefig(buffer, format="png")
         buffer.seek(0)
 
         # Encode the image as base64
         image_base64 = base64.b64encode(buffer.getvalue()).decode()
 
         # Render the template with the image
-        return render_template('image.html', image=image_base64)
+        return render_template("image.html", image=image_base64)
     else:
         # Render the initial template with the form
-        return render_template('index.html')
+        return render_template("index.html")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run()
