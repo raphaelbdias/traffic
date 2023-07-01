@@ -3,40 +3,38 @@ import geopandas as gpd
 import sqlite3
 import pandas as pd
 
-def import_street_data_to_sqlite(place_name, db_name):
+def import_street_data_to_sqlite(place_name):
     # Get the street network for the specified place
-    graph = ox.graph_from_place(place_name, network_type='all')
+    graph = ox.graph_from_place(place_name, network_type='drive')
 
     # Convert the graph to a GeoDataFrame
     gdf = ox.graph_to_gdfs(graph, nodes=False, edges=True)
 
-    # Check the column names in the GeoDataFrame
-    print(gdf.columns)
+    # Check the available columns in the GeoDataFrame
+    return gdf
 
-    # Connect to the SQLite database
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    # # Extract the necessary columns from the GeoDataFrame
+    # edges_df = gdf[['osmid', 'name', 'highway', 'length', 'geometry']].copy()
+    # nodes_df = gdf[['osmid', 'geometry']].copy()
 
-    # Import Nodes Data from GeoDataFrame to SQLite
-    nodes_df = gdf[['osmid', 'geometry']].copy()
-    nodes_df['osmid'] = nodes_df['osmid'].astype(str)  # Convert osmid to string type
-    nodes_df.to_sql('nodes', conn, if_exists='replace', index=False)
+    # # Clean the GeoDataFrame by removing rows with missing or invalid geometry
+    # edges_df = edges_df.dropna(subset=['geometry'])
+    # edges_df = edges_df[edges_df['geometry'].is_valid]
 
-    # Import Edges Data from GeoDataFrame to SQLite
-    edges_df = gdf[['osmid', 'u', 'v']].copy()
-    edges_df['osmid'] = edges_df['osmid'].astype(str)  # Convert osmid to string type
-    edges_df.to_sql('edges', conn, if_exists='replace', index=False)
+    # # Convert LineString objects to WKT format
+    # edges_df['geometry'] = edges_df['geometry'].apply(lambda line: line.wkt)
 
-    # Close the database connection
-    conn.close()
+    # # Create a SQLite connection
+    # conn = sqlite3.connect(db_name)
 
-    print("Street data imported successfully to SQLite database.")
+    # # Import the extracted data into SQLite tables
+    # edges_df.to_sql('edges', conn, if_exists='replace', index=False)
+    # nodes_df.to_sql('nodes', conn, if_exists='replace', index=False)
 
-# Specify the name that is used to search for the data
+    # # Close the SQLite connection
+    # conn.close()
+
+# Example usage
 place_name = "Edgewood, Washington, D.C., USA"
-
-# Specify the name of the SQLite database
-db_name = "your_database.db"
-
-# Call the function to import street data
-import_street_data_to_sqlite(place_name, db_name)
+db_name = "street_data.db"
+print(import_street_data_to_sqlite(place_name))
