@@ -1,4 +1,8 @@
-pip3 install math
-pip3 install pandas
-pip3 install io
-pip3 install requests
+flask==2.3.2
+matplotlib==3.7.1
+networkx==3.1
+osmnx==1.5.0
+geopandas==0.13.2
+geopy==2.3.0
+pandas==2.0.3
+shapely==2.0.1

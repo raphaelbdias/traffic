@@ -4,7 +4,6 @@ import base64
 import osmnx  as ox
 import networkx as nx
 from flask import Flask, render_template, request
-from geolocation import import_street_data
 from calculations import create_geodataframe, osm_network
 import matplotlib.pyplot as plt
 import geopandas as gpd
