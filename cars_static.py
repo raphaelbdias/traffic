@@ -25,7 +25,7 @@ def find_highway_length(csv_file, highway_name):
         return total_length
 
 # Example usage
-csv_file = 'TrafficData.csv'
+csv_file = 'streetdata_sudbury.csv'
 highway_name = 'Highway 144'
 total_length = find_highway_length(csv_file, highway_name)
 print(f"The total length of {highway_name} is: {total_length} units")
