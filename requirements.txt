@@ -5,4 +5,5 @@ osmnx==1.5.0
 geopandas==0.13.2
 geopy==2.3.0
 pandas==2.0.3
+scikit-learn==1.2.2
 shapely==2.0.1
