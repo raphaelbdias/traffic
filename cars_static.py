@@ -26,6 +26,8 @@ def find_highway_length(csv_file, highway_name):
 
 # Random point
 csv_file = 'TrafficData.csv'
+# Example usage
+csv_file = 'streetdata_sudbury.csv'
 highway_name = 'Highway 144'
 total_length = find_highway_length(csv_file, highway_name)
 print(f"The total length of {highway_name} is: {total_length} units")

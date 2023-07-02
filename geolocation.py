@@ -1,10 +1,11 @@
-import osmnx as ox
-import geopandas as gpd
-import sqlite3
-import pandas as pd
+"""looks for the streets using OpenStreetMaps"""
 
-def import_street_data_to_sqlite(place_name):
-    # Get the street network for the specified place
+import osmnx as ox
+
+def import_street_data(place_name):
+
+    """Get the street network for the specified place"""
+
     graph = ox.graph_from_place(place_name, network_type='drive')
 
     # Convert the graph to a GeoDataFrame
@@ -13,34 +14,15 @@ def import_street_data_to_sqlite(place_name):
     # Check the available columns in the GeoDataFrame
     return gdf
 
-    # # Extract the necessary columns from the GeoDataFrame
-    # edges_df = gdf[['osmid', 'name', 'highway', 'length', 'geometry']].copy()
-    # nodes_df = gdf[['osmid', 'geometry']].copy()
+"""
+    Example usage
+    PLACE_NAME = "Greater Sudbury, ON, Canada"
 
-    # # Clean the GeoDataFrame by removing rows with missing or invalid geometry
-    # edges_df = edges_df.dropna(subset=['geometry'])
-    # edges_df = edges_df[edges_df['geometry'].is_valid]
+    streetdata = import_street_data(PLACE_NAME)
 
-    # # Convert LineString objects to WKT format
-    # edges_df['geometry'] = edges_df['geometry'].apply(lambda line: line.wkt)
+    # save the data to csv, turn function off after 1st save
+    # import pandas as pd
+    # streetdata.to_csv('/workspaces/traffic/streetdata_sudbury.csv')
 
-    # # Create a SQLite connection
-    # conn = sqlite3.connect(db_name)
-
-    # # Import the extracted data into SQLite tables
-    # edges_df.to_sql('edges', conn, if_exists='replace', index=False)
-    # nodes_df.to_sql('nodes', conn, if_exists='replace', index=False)
-
-    # # Close the SQLite connection
-    # conn.close()
-
-# Example usage
-place_name = "Greater Sudbury, ON, Canada"
-db_name = "street_data.db"
-
-streetdata = import_street_data_to_sqlite(place_name)
-
-# save the data to csv, turn function off after 1st save
-# streetdata.to_csv('/workspaces/traffic/streetdata_sudbury.csv')
-
-print(streetdata)
+    print(streetdata, flush=False)
+"""
