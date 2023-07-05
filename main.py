@@ -8,6 +8,9 @@ from calculations import create_geodataframe, osm_network
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import geopy
+import folium
+from folium.plugins import FastMarkerCluster
+
 
 # url = 'https://raw.githubusercontent.com/raphaelbdias/traffic/main/TrafficData.csv?token=GHSAT0AAAAAACEPSUZXJ36YCNTVOP725UUKZE5ZOCQ'
 # records = requests.get(url).content
@@ -52,30 +55,19 @@ def display_image():
         # Find the shortest path based on travel time
         route = nx.shortest_path(G, orig_node, destination_node, weight="travel_time")
 
-        # Plot the graph with the route
-        fig, ax = ox.plot_graph_route(
-            G, route, node_size=0, figsize=(12, 8), show=False, close=False
-        )
+        # Create a folium map centered around the origin
+        m = folium.Map(location=[origin_point[0], origin_point[1]], zoom_start=12)
 
-        # Calculate the bounds of the route nodes
-        route_nodes = ox.graph_to_gdfs(G, edges=False).loc[route]
-        xmin, ymin, xmax, ymax = route_nodes.total_bounds
+        # Add the route to the map
+        route_coordinates = [(G.nodes[route[i]]["y"], G.nodes[route[i]]["x"]) for i in range(len(route))]
+        folium.PolyLine(route_coordinates, color='blue', weight=2.5, opacity=1).add_to(m)
 
-        # Set the plot bounds to focus on the route
-        margin = 0.02  # Adjust this value to control the zoom level
-        ax.set_xlim(xmin - margin, xmax + margin)
-        ax.set_ylim(ymin - margin, ymax + margin)
+        # Add markers for the origin and destination
+        folium.Marker(location=[origin_point[0], origin_point[1]], popup='Origin').add_to(m)
+        folium.Marker(location=[destination_point[0], destination_point[1]], popup='Destination').add_to(m)
 
-        # Save the plot to a BytesIO object
-        buffer = io.BytesIO()
-        fig.savefig(buffer, format="png")
-        buffer.seek(0)
-
-        # Encode the plot image as base64
-        image_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-        # Render the template with the image
-        return render_template("image.html", image=image_base64)
+        # Display the map
+        return m._repr_html_()
     else:
         # Render the initial template with the form
         return render_template("index.html")
