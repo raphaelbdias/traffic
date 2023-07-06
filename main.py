@@ -3,13 +3,16 @@ import io
 import base64
 import osmnx as ox
 import networkx as nx
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, render_template_string
 from calculations import create_geodataframe, osm_network
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import geopy
 import folium
 from folium.plugins import FastMarkerCluster
+import geocoder
+from folium import IFrame
+
 
 
 # url = 'https://raw.githubusercontent.com/raphaelbdias/traffic/main/TrafficData.csv?token=GHSAT0AAAAAACEPSUZXJ36YCNTVOP725UUKZE5ZOCQ'
@@ -35,16 +38,15 @@ def display_image():
         G = ox.add_edge_speeds(G)
         G = ox.add_edge_travel_times(G)
 
-        # Convert string address into geographical coordinates
-        def geocode_address(address, crs=4326):
-            geocode = gpd.tools.geocode(
-                address, provider="nominatim", user_agent="drive time demo"
-            ).to_crs(crs)
-            return (geocode.iloc[0].geometry.y, geocode.iloc[0].geometry.x)
+
+        def get_latlng(location):
+            g = geocoder.osm(location, method='reverse')
+            coordinates = g.latlng
+            return coordinates
 
         # Get origin and destination coordinates
-        origin_point = geocode_address(origin_name)
-        destination_point = geocode_address(destination_name)
+        origin_point = get_latlng(origin_name)
+        destination_point = get_latlng(destination_name)
 
         # Find the closest graph nodes to origin and destination
         orig_node = ox.distance.nearest_nodes(G, origin_point[1], origin_point[0])
@@ -73,38 +75,180 @@ def display_image():
         return render_template("index.html")
 
 
-@app.route("/points")
-def two_points():
-    # Kamppi shopping center as Origin
-    origin = create_geodataframe("Kamppi", 24.933260, 60.169111)
+@app.route("/test", methods=["GET", "POST"])
+def display_image_test():
+    if request.method == "POST":
+        # Process form data and generate the route
+        g = geocoder.ip('me')
+        print(g)
+        longitude, latitude = g.latlng
+        print(g.latlng)
 
-    # Physicum as Destination
-    destination = create_geodataframe("Physicum", 24.962608, 60.205301)
+        # Reverse geocoding to get the location name
+        location = geocoder.osm([longitude, latitude], method='reverse')
+        print(location)
+        location_name = location.address
+        print(location_name)
+        
+        city_name = location_name
 
-    combined = origin._append(destination)
-    convex = combined.unary_union.convex_hull
-    graph_extent = convex.buffer(0.02)
+        # Retrieve the street network graph for the city
+        G = ox.graph_from_point(tuple((longitude, latitude)), network_type="drive")
+        # Impute edge (driving) speeds and calculate edge traversal times
+        G = ox.add_edge_speeds(G)
+        G = ox.add_edge_travel_times(G)
 
-    # fetching graph
-    graph = ox.graph_from_polygon(graph_extent, network_type="drive")
+        # Convert string address into geographical coordinates
+        def geocode_address(address, crs=4326):
+            geocode = gpd.tools.geocode(
+                address, provider="nominatim", user_agent="drive time demo"
+            ).to_crs(crs)
+            return (geocode.iloc[0].geometry.y, geocode.iloc[0].geometry.x)
 
-    # Get the edges/network as GeoDataFrame
-    edges = ox.graph_to_gdfs(graph, nodes=False)
+        # Get origin and destination coordinates
+        origin_point = geocode_address(city_name)
+        destination_point = geocode_address(destination_name)
 
-    # Convert the GeoDataFrame to an image
-    image = edges.plot(figsize=(10, 10), edgecolor="black", linewidth=0.5)
+        # Find the closest graph nodes to origin and destination
+        orig_node = ox.distance.nearest_nodes(G, origin_point[1], origin_point[0])
+        destination_node = ox.distance.nearest_nodes(
+            G, destination_point[1], destination_point[0]
+        )
 
-    # Save the image to a BytesIO object
-    buffer = io.BytesIO()
-    image.figure.savefig(buffer, format="png")
-    buffer.seek(0)
-    # Encode the image as base64
-    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+        # Find the shortest path based on travel time
+        route = nx.shortest_path(G, orig_node, destination_node, weight="travel_time")
 
-    image_base64 = osm_network(origin, destination)
+        # Create a folium map centered around the origin
+        m = folium.Map(location=[origin_point[0], origin_point[1]], zoom_start=12)
 
-    return render_template("two_points.html", image_base64=image_base64)
+        # Add the route to the map
+        route_coordinates = [(G.nodes[route[i]]["y"], G.nodes[route[i]]["x"]) for i in range(len(route))]
+        folium.PolyLine(route_coordinates, color='blue', weight=2.5, opacity=1).add_to(m)
 
+        # Add markers for the origin and destination
+        folium.Marker(location=[origin_point[0], origin_point[1]], popup='Origin').add_to(m)
+        folium.Marker(location=[destination_point[0], destination_point[1]], popup='Destination').add_to(m)
+
+        # Generate the HTML for the form
+        form_html = """
+        <div id="form-container">
+            <form method="POST" action="/">
+                <label for="origin">Origin:</label>
+                <input type="text" id="origin" name="origin" required><br><br>
+                <label for="destination">Destination:</label>
+                <input type="text" id="destination" name="destination" required><br><br>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+        """
+
+        # Render the template with the map and form HTML
+        return render_template_string(
+            """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Display Image</title>
+                <style>
+                    #map-container {
+                        position: relative;
+                        width: 100%;
+                        height: 500px;
+                    }
+                    #form-container {
+                        position: absolute;
+                        top: 10px;
+                        left: 10px;
+                        background-color: white;
+                        padding: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="map-container">{{ map_html }}</div>
+            </body>
+            </html>
+            """,
+            map_html=m._repr_html_(),
+        )
+    else:
+
+        g = geocoder.ip('me')
+        print(g)
+        longitude, latitude = g.latlng
+        print(g.latlng)
+
+        # Reverse geocoding to get the location name
+        location = geocoder.osm([longitude, latitude], method='reverse')
+        print(location)
+        location_name = location.address
+        print(location_name)
+        
+        city_name = location_name
+
+        # Retrieve the street network graph for the city
+        G = ox.graph_from_point(tuple((longitude, latitude)), network_type="drive")
+        # Impute edge (driving) speeds and calculate edge traversal times
+        G = ox.add_edge_speeds(G)
+        G = ox.add_edge_travel_times(G)
+
+        # Convert string address into geographical coordinates
+        def geocode_address(address, crs=4326):
+            geocode = gpd.tools.geocode(
+                address, provider="nominatim", user_agent="drive time demo"
+            ).to_crs(crs)
+            return (geocode.iloc[0].geometry.y, geocode.iloc[0].geometry.x)
+
+        # Get origin and destination coordinates
+        origin_point = geocode_address(city_name)
+
+        # Create a folium map centered around the origin
+        m = folium.Map(location=[origin_point[0], origin_point[1]], zoom_start=12)
+        # Create a folium map centered around the user's location
+        m = folium.Map(location=[latitude, longitude], zoom_start=12)
+
+        # Generate the HTML for the form
+        form_html = """
+        <div id="form-container">
+            <form method="POST" action="/">
+                <label for="origin">Origin:</label>
+                <input type="text" id="origin" name="origin" required><br><br>
+                <label for="destination">Destination:</label>
+                <input type="text" id="destination" name="destination" required><br><br>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+        """
+
+        # Render the template with the map and form HTML
+        return render_template_string(
+            """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Display Image</title>
+                <style>
+                    #map-container {
+                        position: relative;
+                        width: 100%;
+                        height: 500px;
+                    }
+                    #form-container {
+                        position: absolute;
+                        top: 10px;
+                        left: 10px;
+                        background-color: white;
+                        padding: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="map-container">{{ map_html }}</div>
+            </body>
+            </html>
+            """,
+            map_html=m._repr_html_(),
+        )
 
 if __name__ == "__main__":
     app.run(debug=True, port=8080)

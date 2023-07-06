@@ -13,12 +13,18 @@
 
 import geocoder
 
-g = geocoder.ip('me')
-latitude, longitude = g.latlng
+# g = geocoder.ip('me')
+# latitude, longitude = g.latlng
 
-# Reverse geocoding to get the location name
-location = geocoder.osm([latitude, longitude], method='reverse')
-location_name = location.address
+# # Reverse geocoding to get the location name
+# location = geocoder.osm([latitude, longitude], method='reverse')
+# location_name = location.address
 
-print(f"Latitude: {latitude}, Longitude: {longitude}")
-print(f"Location Name: {location_name}")
+# print(f"Latitude: {latitude}, Longitude: {longitude}")
+# print(f"Location Name: {location_name}")
+
+
+def get_latlng(location):
+    g = geocoder.osm(location, method='reverse')
+    coordinates = g.latlng
+    return coordinates
