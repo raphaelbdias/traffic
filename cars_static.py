@@ -11,6 +11,8 @@ logic flow:
     
 """
 import csv
+import requests
+import xmltodict
 
 
 def find_highway_length(csv_file, highway_name):
@@ -58,7 +60,17 @@ def get_random_point_from_geometry(csv_file):
 
     return random_point
 
-
-# Usage
-random_point = get_random_point_from_geometry("geometry_data.csv")
-print(random_point)
+def get_traffic_info(api_key, lat, lon):
+    url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/xml?key={api_key}&point={lat},{lon}"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        # Process the response data here
+        traffic_data = response.text
+        # Return or further process the traffic_data as per your requirement
+        data_dict = xmltodict.parse(traffic_data)
+        return data_dict
+    else:
+        # Handle error cases here
+        print("Error:", response.status_code)
+        return None
